@@ -2,44 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Text Extractor App</title>
-  <!-- Include Tesseract.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <title>Reliable Text Extractor</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f2f2f2;
+      background-color: #f8f8f8;
       margin: 0;
       padding: 2rem;
       display: flex;
       justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
     }
     .container {
-      background: #fff;
-      padding: 2rem;
+      background-color: #fff;
+      padding: 1.5rem;
       border-radius: 5px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      max-width: 500px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      max-width: 600px;
       width: 100%;
     }
     h1 {
       text-align: center;
       color: #333;
     }
-    .upload-section {
+    .file-input-container {
       text-align: center;
       margin-bottom: 1rem;
     }
     input[type="file"] {
       display: none;
     }
-    .custom-file-upload {
+    .custom-file-label {
       display: inline-block;
       padding: 0.5rem 1rem;
-      cursor: pointer;
       background: #007bff;
       color: #fff;
-      border-radius: 3px;
+      border-radius: 4px;
+      cursor: pointer;
     }
     .preview {
       text-align: center;
@@ -49,82 +49,85 @@
       max-width: 100%;
       height: auto;
       border: 1px solid #ccc;
-      padding: 0.3rem;
-      border-radius: 3px;
+      border-radius: 4px;
     }
     #output {
-      background: #eee;
+      background-color: #eee;
       padding: 1rem;
-      height: 200px;
-      overflow-y: auto;
-      border-radius: 3px;
+      border-radius: 4px;
+      min-height: 150px;
       white-space: pre-wrap;
     }
     .loader {
-      display: none;
       text-align: center;
       color: #007bff;
-      margin: 1rem 0;
+      display: none;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>Text Extractor</h1>
-    <div class="upload-section">
-      <label for="file-upload" class="custom-file-upload">Choose Image</label>
-      <input id="file-upload" type="file" accept="image/png, image/jpeg, image/jpg" />
+    <h1>Extract Text from Image</h1>
+    <div class="file-input-container">
+      <label class="custom-file-label" for="file-upload">Choose an Image</label>
+      <input type="file" id="file-upload" accept="image/png, image/jpeg, image/jpg">
     </div>
     <div class="preview" id="image-preview"></div>
-    <div class="loader" id="loader">Processing image... Please wait.</div>
+    <div class="loader" id="loader">Processing image, please wait...</div>
     <h3>Extracted Text:</h3>
-    <div id="output"></div>
+    <pre id="output">Your extracted text will appear here.</pre>
   </div>
 
   <script>
-    // Select elements
     const fileUpload = document.getElementById('file-upload');
     const imagePreview = document.getElementById('image-preview');
     const output = document.getElementById('output');
     const loader = document.getElementById('loader');
 
-    // Listen to file input changes
+    // Listen for file changes
     fileUpload.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (file) {
-        // Clear previous outputs
-        output.textContent = '';
-        imagePreview.innerHTML = '';
-
-        // Display the image preview
+        // Preview the image
         const reader = new FileReader();
         reader.onload = function (e) {
-          const img = document.createElement('img');
-          img.src = e.target.result;
-          imagePreview.appendChild(img);
+          imagePreview.innerHTML = `<img src="${e.target.result}" alt="Image Preview">`;
         };
         reader.readAsDataURL(file);
-
-        // Start the OCR processing
-        extractText(file);
       }
     });
 
-    // Function to run Tesseract.js OCR
-    async function extractText(file) {
+    // Trigger file upload when the custom label is clicked
+    document.querySelector('.custom-file-label').addEventListener('click', () => {
+      fileUpload.click();
+    });
+
+    // Listen for image file selection to start OCR
+    fileUpload.addEventListener('change', async (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      // Display loader
       loader.style.display = 'block';
+      output.textContent = '';
+
+      // Prepare form data for the upload
+      const formData = new FormData();
+      formData.append('image', file);
+
       try {
-        const result = await Tesseract.recognize(file, 'eng', {
-          logger: m => console.log(m)
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
         });
-        output.textContent = result.data.text || "No text detected.";
+        const data = await response.json();
+        output.textContent = data.text || 'No text detected.';
       } catch (error) {
-        console.error("Error extracting text:", error);
-        output.textContent = "An error occurred while extracting text.";
+        output.textContent = 'An error occurred while extracting text.';
       } finally {
         loader.style.display = 'none';
       }
-    }
+    });
   </script>
 </body>
 </html>
