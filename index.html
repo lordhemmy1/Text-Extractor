@@ -2,23 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Reliable Text Extractor</title>
+  <title>OCR Text Extractor</title>
+  <!-- Include Tesseract.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #f8f8f8;
       margin: 0;
       padding: 2rem;
+      background-color: #f0f2f5;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
-      min-height: 100vh;
     }
     .container {
-      background-color: #fff;
+      background: #fff;
       padding: 1.5rem;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       max-width: 600px;
       width: 100%;
     }
@@ -35,15 +35,15 @@
     }
     .custom-file-label {
       display: inline-block;
-      padding: 0.5rem 1rem;
-      background: #007bff;
+      padding: 0.5rem 1.5rem;
+      background-color: #007bff;
       color: #fff;
       border-radius: 4px;
       cursor: pointer;
     }
     .preview {
       text-align: center;
-      margin-bottom: 1rem;
+      margin: 1rem 0;
     }
     .preview img {
       max-width: 100%;
@@ -52,11 +52,12 @@
       border-radius: 4px;
     }
     #output {
-      background-color: #eee;
+      background: #eee;
       padding: 1rem;
       border-radius: 4px;
       min-height: 150px;
       white-space: pre-wrap;
+      overflow-y: auto;
     }
     .loader {
       text-align: center;
@@ -67,67 +68,65 @@
 </head>
 <body>
   <div class="container">
-    <h1>Extract Text from Image</h1>
+    <h1>OCR Text Extractor</h1>
     <div class="file-input-container">
       <label class="custom-file-label" for="file-upload">Choose an Image</label>
-      <input type="file" id="file-upload" accept="image/png, image/jpeg, image/jpg">
+      <input id="file-upload" type="file" accept="image/png, image/jpeg, image/jpg">
     </div>
     <div class="preview" id="image-preview"></div>
-    <div class="loader" id="loader">Processing image, please wait...</div>
+    <div class="loader" id="loader">Processing image, please wait…</div>
     <h3>Extracted Text:</h3>
     <pre id="output">Your extracted text will appear here.</pre>
   </div>
 
   <script>
+    // Select elements
     const fileUpload = document.getElementById('file-upload');
     const imagePreview = document.getElementById('image-preview');
     const output = document.getElementById('output');
     const loader = document.getElementById('loader');
 
-    // Listen for file changes
-    fileUpload.addEventListener('change', (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        // Preview the image
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          imagePreview.innerHTML = `<img src="${e.target.result}" alt="Image Preview">`;
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    // Trigger file upload when the custom label is clicked
+    // When the "Choose an Image" button is clicked, trigger the hidden file input
     document.querySelector('.custom-file-label').addEventListener('click', () => {
       fileUpload.click();
     });
 
-    // Listen for image file selection to start OCR
-    fileUpload.addEventListener('change', async (event) => {
+    // Function to display image preview
+    fileUpload.addEventListener('change', (event) => {
       const file = event.target.files[0];
       if (!file) return;
 
-      // Display loader
-      loader.style.display = 'block';
+      // Clear previous outputs
       output.textContent = '';
+      imagePreview.innerHTML = '';
 
-      // Prepare form data for the upload
-      const formData = new FormData();
-      formData.append('image', file);
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = document.createElement('img');
+        img.src = e.target.result;
+        imagePreview.appendChild(img);
+      };
+      reader.readAsDataURL(file);
 
+      // Start OCR extraction
+      extractText(file);
+    });
+
+    // Function to extract text using Tesseract.js
+    async function extractText(file) {
+      loader.style.display = 'block';
       try {
-        const response = await fetch('/upload', {
-          method: 'POST',
-          body: formData
+        const result = await Tesseract.recognize(file, 'eng', {
+          logger: m => console.log(m)
         });
-        const data = await response.json();
-        output.textContent = data.text || 'No text detected.';
+        output.textContent = result.data.text || "No text detected.";
       } catch (error) {
-        output.textContent = 'An error occurred while extracting text.';
+        console.error("OCR Error:", error);
+        output.textContent = "An error occurred while extracting text.";
       } finally {
         loader.style.display = 'none';
       }
-    });
+    }
   </script>
 </body>
 </html>
